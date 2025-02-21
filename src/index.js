@@ -1,27 +1,27 @@
-// import dotenv from "dotenv"
-// import connectDB from "./db/index.js";
-// import {app} from './app.js'
+import dotenv from "dotenv"
+import connectDB from "./db/index.js";
+import {app} from './app.js'
 
-// dotenv.config()
+dotenv.config()
 
-// connectDB().then(() => {
-//     app.listen(process.env.PORT, () => {
-//         console.log(`Server is running at http://localhost:${process.env.PORT}`);
-//     });
-// });
+connectDB().then(() => {
+    app.listen(process.env.PORT, () => {
+        console.log(`Server is running at http://localhost:${process.env.PORT}`);
+    });
+});
 
 // export default createServer(app); // Export as a serverless function
 
-import dotenv from "dotenv";
-import connectDB from "./db/index.js";
-import { app } from "./app.js";
+// import dotenv from "dotenv";
+// import connectDB from "./db/index.js";
+// import { app } from "./app.js";
 
-dotenv.config();
+// dotenv.config();
 
-export default async function handler(req, res) {
-    await connectDB(); // Ensure DB is connected before handling requests
-    return app(req, res); // Forward request to Express
-}
+// export default async function handler(req, res) {
+//     await connectDB(); // Ensure DB is connected before handling requests
+//     return app(req, res); // Forward request to Express
+// }
 
 
 
