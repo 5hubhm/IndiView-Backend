@@ -33,19 +33,12 @@ const generateAccessAndRefereshTokens = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  // asyncHandler makes sure we catch errors without breaking the whole app
-
-  // Getting user details from the request body (aka what the frontend sends us)
   const { fullName, email, username, password } = req.body;
- 
-  if (
-    [fullName, email, username, password].some((field) => field?.trim() === "")
-  ) {
+
+  if ([fullName, email, username, password].some((field) => field?.trim() === "")) {
     throw new ApiError(400, "All fields are required");
   }
 
-  // Checking if this username or email is already taken
-  // $or is a MongoDB operator that checks multiple conditions
   const existedUser = await User.findOne({
     $or: [{ username }, { email }],
   });
@@ -54,62 +47,38 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "User with email or username already exists");
   }
 
-  // Handling profile pics
-  // req.files contains uploaded files; we grab the avatar image (mandatory)
-  const avatarLocalPath = req.files?.avatar[0]?.path; // Grabbing the avatar file path
-
-  let coverImageLocalPath; // Setting up a spot for the cover image (if provided)
-  if (
-    req.files && // Making sure files exist
-    Array.isArray(req.files.coverImage) && // Checking if it’s an array (because multiple files can be sent)
-    req.files.coverImage.length > 0 // Making sure there’s at least one cover image
-  ) {
-    coverImageLocalPath = req.files.coverImage[0].path; // Grabbing the path of the first cover image
-  }
+  const avatarLocalPath = req.files?.avatar?.[0]?.path;
+  const coverImageLocalPath = req.files?.coverImage?.[0]?.path || null;
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar file is required");
   }
 
-  // Uploading avatar to Cloudinary (fancy cloud storage)
-  // Cloudinary returns an object with a URL if successful
   const avatar = await uploadOnCloudinary(avatarLocalPath);
+  const coverImage = coverImageLocalPath ? await uploadOnCloudinary(coverImageLocalPath) : null;
 
-  // Uploading cover image (if provided)
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-
-  // Making sure the avatar actually uploaded
   if (!avatar) {
     throw new ApiError(400, "Avatar upload failed");
   }
 
-  // Creating a new user in the database
   const user = await User.create({
     fullName,
-    avatar: avatar.url, // Saving avatar URL from Cloudinary
-    coverImage: coverImage?.url || "", // Saving cover image URL (or empty if none provided)
+    avatar: avatar.url,
+    coverImage: coverImage?.url || "",
     email,
     password,
-    username: username.toLowerCase(), // Lowercasing username to keep things neat
+    username: username.toLowerCase(),
   });
 
-  // Fetching the newly created user, but without sensitive info (password, refresh token)
-  // .select("-password -refreshToken") removes those fields from the returned object
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
+  const createdUser = await User.findById(user._id).select("-password -refreshToken");
 
   if (!createdUser) {
     throw new ApiError(500, "Something went wrong while registering the user");
   }
 
-  // Sending back a success response
-  return res
-    .status(201)
-    .json(new ApiResponse(200, createdUser, "User registered successfully"));
-
-  
+  return res.status(201).json(new ApiResponse(200, createdUser, "User registered successfully"));
 });
+
 
 const loginUser = asyncHandler(async (req, res) => {
   // This function handles user login requests
@@ -420,6 +389,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, userDoc, "Cover image updated successfully"));
 });
+
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
   // Function to get the profile details of a user's channel
