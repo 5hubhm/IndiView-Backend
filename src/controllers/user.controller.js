@@ -30,16 +30,6 @@ const generateAccessAndRefereshTokens = async (userId) => {
       "Something went wrong while generating refresh and access token"
     );
   }
-
-  /* 
-
-  👉 Why do we generate access and refresh tokens separately?
-   - Access tokens expire quickly for security.
-   - Refresh tokens last longer and are used to get new access tokens without logging in again.
-
-   👉 Why do we set validateBeforeSave: false?
-   - To prevent Mongoose from running unnecessary validations when updating only the refresh token.
-*/
 };
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -47,11 +37,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   // Getting user details from the request body (aka what the frontend sends us)
   const { fullName, email, username, password } = req.body;
-  // Example request body:
-  // { fullName: "John Doe", email: "john@example.com", username: "john123", password: "mypassword" }
-
-  // Checking if any required field is empty
-  // .trim() removes spaces so "   " isn’t counted as valid input
+ 
   if (
     [fullName, email, username, password].some((field) => field?.trim() === "")
   ) {
@@ -122,49 +108,7 @@ const registerUser = asyncHandler(async (req, res) => {
     .status(201)
     .json(new ApiResponse(200, createdUser, "User registered successfully"));
 
-  /*
-TL;DR of what’s happening here:
-
-1. Grab user details from the request.
-   Example input:
-   { fullName: "Alice Doe", email: "alice@example.com", username: "alice123", password: "securepass" }
-
-2. Check if any field is empty and throw an error if it is.
-
-3. Make sure the username/email isn’t already taken by checking the database.
-
-4. Grab the avatar file (mandatory) and an optional cover image.
-
-5. Upload images to Cloudinary, which returns URLs.
-
-6. Save user data in the database (with uploaded image URLs).
-
-7. Retrieve the user from the database again, but exclude sensitive fields (password, refresh token).
-
-8. Send a success response with the user’s details (minus sensitive info).
-
-
-👉 Why do we exclude password & refreshToken?
-   - Security reasons! We don’t want to expose sensitive info in API responses.
-
-👉 Why do we use .toLowerCase() for the username?
-   - To avoid case sensitivity issues, like "JohnDoe" and "johndoe" being treated as different users.
-
-👉 Why do we check if (!avatar) after uploading?
-   - In case the upload fails, we don’t want to proceed with a missing profile pic.
-
-👉 Why do we use .some() to check empty fields?
-   - Because it quickly checks if *any* field is empty without looping through all of them manually.
-
-👉 Why do we use MongoDB’s $or operator?
-   - It lets us check multiple conditions at once, making sure no duplicate username *or* email exists.
-
-👉 Why do we check if coverImageLocalPath exists before uploading?
-   - Not everyone uploads a cover image, so we don’t want an error if it’s missing.
-
-👉 Why do we return res.status(201)?
-   - 201 means "Created" in HTTP status codes, which is perfect for a successful registration.
-*/
+  
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -183,13 +127,6 @@ const loginUser = asyncHandler(async (req, res) => {
     $or: [{ username }, { email }], // Search for user by either email or username
   });
 
-  /*
-
-  👉 What is `findOne` in MongoDB?
-   - `findOne` is a Mongoose method that searches for a single document in a collection.
-   - `$or` operator allows us to find a user by either `email` or `username`.
-
-   */
 
   if (!user) {
     // If user isn't found, send a 404 error
@@ -235,24 +172,7 @@ const loginUser = asyncHandler(async (req, res) => {
       )
     );
 
-  /*
-👉 Why do we check for both email & username?
-   - Users can log in using either, so we search by both.
-
-👉 Why do we exclude password & refreshToken from the response?
-   - To prevent sensitive information from being exposed in API responses.
-
-👉 Why do we hash passwords & check using bcrypt?
-   - Storing plain text passwords is insecure. bcrypt allows safe comparisons.
-
-👉 Why do we generate access & refresh tokens on login?
-   - Access tokens provide short-term authentication, while refresh tokens allow users to stay logged in.
-
-👉 Why do we store tokens in cookies with httpOnly & secure?
-   - httpOnly: Prevents JavaScript-based attacks (e.g., XSS)
-   - secure: Ensures cookies are only sent over HTTPS for security.
-*/
-});
+  });
 
 const logoutUser = asyncHandler(async (req, res) => {
   // This function logs out the user by removing their refresh token from the database
@@ -269,13 +189,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     }
   );
 
-  /*
-   What is findByIdAndUpdate?
-  - This is a MongoDB method (via Mongoose) that finds a document by its `_id` and updates it.
-  - `$unset` removes a field from the document (in this case, refreshToken).
-  - `{ new: true }` ensures we get the updated document after the change.
-  */
-
+ 
   const options = {
     httpOnly: true, // Ensures cookies can't be accessed via JavaScript (security measure)
     secure: true, // Ensures cookies are only sent over HTTPS
@@ -287,18 +201,6 @@ const logoutUser = asyncHandler(async (req, res) => {
     .clearCookie("refreshToken", options) // Remove refreshToken cookie
     .json(new ApiResponse(200, {}, "User logged Out"));
 
-  /*
- Logout Process Notes:
-
-👉 Why do we unset refreshToken in the database?
-   - This ensures the user can't use an old refresh token to get a new access token after logging out.
-   - Think of it like taking away someone's membership card when they leave the club!
-
-👉 Why do we clear cookies?
-   - Access & refresh tokens are stored in cookies, so clearing them fully logs the user out.
-   - No tokens = No access = Secure logout!
-
-*/
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -359,30 +261,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     throw new ApiError(401, error?.message || "Invalid refresh token"); // Handles token verification errors
   }
 
-  /*
- Deep Dive into Refresh Token Flow:
-
-👉 What’s the purpose of a refresh token?
-   - Access tokens expire quickly for security reasons.
-   - Refresh tokens allow users to stay logged in without re-entering their password.
-
-👉 Why do we verify the refresh token?
-   - To make sure it was created by our server and hasn’t been tampered with.
-   - Prevents hackers from generating fake tokens.
-
-👉 Why do we check if the refresh token matches the one in the database?
-   - If a hacker steals an old refresh token, they shouldn’t be able to use it.
-   - Only the latest refresh token should be valid.
-
-👉 Why do we replace the refresh token every time?
-   - If someone steals the refresh token, it becomes useless after the next login.
-   - This makes our system more secure.
-
-👉 What happens if a refresh token is missing?
-   - The user is logged out and must log in again.
-   - Prevents unauthorized access when tokens are missing.
-
-*/
 });
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
@@ -410,16 +288,6 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, {}, "Password changed successfully"));
 
-  /*
-  👉 Why do we check oldPassword first?
-     - To prevent unauthorized password changes. Only the correct old password allows an update.
-  
-  👉 Why do we hash the new password before saving? (Handled in Mongoose pre-save middleware)
-     - Storing plain text passwords is insecure. Hashing ensures better security.
-  
-  👉 Why do we use validateBeforeSave: false?
-     - We skip schema validations (if any) to ensure quick updates.
-  */
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
@@ -454,30 +322,14 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     { new: true } // Ensures we get the updated user details
   ).select("-password"); // Do NOT send the password back in response (security matters!)
 
-  /*
-    Finding the user in the database by their ID and updating their fullName and email
-    - req.user?._id → This is how we get the logged-in user's ID
-    - $set → It's a MongoDB operator that updates specific fields
-    - { new: true } → Makes sure we get the updated user data, not the old one
-    - .select("-password") → Excludes the password field from the response (safety first!)
-  */
+
 
   // Send back the updated user data with a success message
   return res
     .status(200)
     .json(new ApiResponse(200, user, "Account details updated successfully"));
 
-  /*
- User Account Updates Notes:
 
-👉 Why use $set instead of replacing the whole document?
-   - This updates only specific fields without touching the rest.
-   - Think of it like changing just your profile picture instead of making a whole new account!
-
-👉 Why exclude the password in the response?
-   - Security reasons! We never want to accidentally expose sensitive data.
-   - Even though passwords are hashed, it’s better not to send them at all.
-*/
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
@@ -501,15 +353,6 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     await cloudinary.uploader.destroy(publicId); // Delete old avatar from Cloudinary
   }
 
-  /*
-    If the user already has an avatar, delete the old one from Cloudinary
-    - user.avatar contains the URL of the current avatar (e.g., "https://res.cloudinary.com/.../avatar123.jpg")
-    - We need to extract the unique identifier ("avatar123") to delete the correct image
-    - .split("/").pop() gets the last part of the URL ("avatar123.jpg")
-    - .split(".")[0] removes the file extension (.jpg), leaving just "avatar123"
-    - This ensures we delete only the user's previous avatar and not anything else!
-  */
-
   // Upload the new avatar to Cloudinary
   const avatar = await uploadOnCloudinary(avatarLocalPath);
 
@@ -528,36 +371,13 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     { new: true }
   ).select("-password");
 
-  /*
-    Updating the user's avatar in the database
-    - $set operator updates only the avatar field without changing other user details
-    - { new: true } ensures we return the updated user object
-    - .select("-password") ensures the password is not included in the response (security measure)
-  */
+
 
   // Sending a success response with the updated user details
   return res
     .status(200)
     .json(new ApiResponse(200, userDoc, "Avatar image updated successfully"));
 
-  /*
- Deep Dive into Avatar Updates:
-
-
-👉 Why do we delete the old avatar from Cloudinary?
-   - Prevents unnecessary storage usage and clutter.
-   - Think of it like replacing your profile picture on social media – you don’t want 10 old ones hanging around!
-
-👉 How does extracting publicId work?
-   - Cloudinary stores images with unique URLs like "https://res.cloudinary.com/.../avatar123.jpg".
-   - To delete the right file, we extract "avatar123" using .split("/").pop().split(".")[0].
-   - This prevents accidental deletions and ensures we remove only the intended avatar!
-
-👉 Why use $set instead of replacing the entire user document?
-   - This updates only the avatar field without affecting other user details.
-   - Like changing just your profile picture without resetting your entire account!
-
-*/
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
@@ -708,33 +528,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       new ApiResponse(200, channel[0], "User channel fetched successfully")
     );
 
-  /*
- Deep Dive into User Channel Fetching:
-
-👉 Why do we use aggregation instead of a simple find query?
-   - Aggregation allows us to fetch and process related data in one go.
-   - Instead of making multiple queries (for user, subscribers, and subscriptions), we optimize it into one pipeline!
-
-👉 Why do we use $lookup twice?
-   - First $lookup fetches all people subscribed to the user's channel.
-   - Second $lookup fetches all channels the user is subscribed to.
-   - This way, we get both subscriber and subscription details in a single query.
-
-👉 How does $size help us?
-   - $size is used to count the number of documents in an array.
-   - We use it to count total subscribers and subscriptions of the user.
-   - Think of it like counting how many followers you have on social media!
-
-👉 What is $cond and why do we use it?
-   - $cond is like an "if-else" statement in MongoDB.
-   - We check if the logged-in user is in the subscriber list using $in.
-   - If yes, we return true (meaning the user is subscribed), otherwise false.
-
-👉 Why do we project specific fields?
-   - To limit the amount of data returned, reducing unnecessary network load.
-   - Sending only relevant data improves efficiency and keeps responses clean!
-
-*/
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {
@@ -826,32 +619,6 @@ const getWatchHistory = asyncHandler(async (req, res) => {
       )
     );
 
-  /*
- Deep Dive into Watch History Fetching:
-
-👉 Why do we use aggregation instead of find()? 
-   - Aggregation allows us to join multiple collections efficiently.
-   - Instead of making separate queries for user, videos and owners, we optimize it into one pipeline.
-
-👉 Why do we use $lookup twice?
-   - First $lookup fetches videos from the user's watch history.
-   - Second $lookup fetches the owner details of each video.
-   - This way, we retrieve all necessary data in one go!
-
-👉 What does $first do in $addFields?
-   - $lookup returns an array, even if there's only one matching document.
-   - $first extracts the first element, so we don't return an array with one object inside.
-   - Think of it like taking a single piece of candy out of a pack instead of carrying the whole pack!
-
-👉 Why do we use $project inside the second $lookup?
-   - To select only the necessary fields (fullName, username, avatar) from the user data.
-   - This reduces the data size and makes the response more efficient.
-
-👉 Why do we access user[0].watchHistory instead of just user.watchHistory?
-   - Aggregation returns an array of results, even if there's only one user.
-   - We extract the first user (index 0) and then access their watchHistory.
-   - It's like picking the first item from a search result list!
-*/
 });
 
 export {
