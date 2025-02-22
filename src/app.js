@@ -6,7 +6,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173"] , // Restricts requests to allowed domains (from .env)
+    origin: "http://localhost:5173" , // Restricts requests to allowed domains (from .env)
     credentials: true, // Allows cookies & authentication headers to be sent
   })
 );

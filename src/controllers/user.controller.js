@@ -141,25 +141,37 @@ const loginUser = asyncHandler(async (req, res) => {
       )
     );
 
-});
+  });
 
 const logoutUser = asyncHandler(async (req, res) => {
-  // Check if req.user exists (Token is valid)
-  if (req.user?._id) {
-    await User.findByIdAndUpdate(req.user._id, {
-      $unset: { refreshToken: 1 },
-    });
-  }
+  // This function logs out the user by removing their refresh token from the database
 
-  const options = { httpOnly: true, secure: true, sameSite: "None" };
+  await User.findByIdAndUpdate(
+    req.user._id, // Find the user by their ID in MongoDB
+    {
+      $unset: {
+        refreshToken: 1, // Removes the refreshToken field from the user document
+      },
+    },
+    {
+      new: true, // Ensures the updated document is returned
+    }
+  );
+
+ 
+  const options = {
+    httpOnly: true, // Ensures cookies can't be accessed via JavaScript (security measure)
+    secure: true, 
+    sameSite: "None",// Ensures cookies are only sent over HTTPS
+  };
 
   return res
     .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, {}, "User logged out successfully"));
-});
+    .clearCookie("accessToken", options) // Remove accessToken cookie
+    .clearCookie("refreshToken", options) // Remove refreshToken cookie
+    .json(new ApiResponse(200, {}, "User logged Out"));
 
+});
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
   // This function helps users stay logged in by refreshing their access token.
@@ -569,7 +581,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
 
   // Step 5: Send the response with the watch history
   return res
-    .status(200)
+    .status(200) 
     .json(
       new ApiResponse(
         200,
