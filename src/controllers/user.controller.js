@@ -123,6 +123,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const options = {
     httpOnly: true, // Prevents JavaScript access to cookies for security or simply users cannot modify the cookies when we set this flag
     secure: true, // Ensures cookies are sent only over HTTPS
+    sameSite: "None",
   };
 
   return res
