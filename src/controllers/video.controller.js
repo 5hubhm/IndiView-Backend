@@ -9,11 +9,11 @@ import { getVideoDuration } from "../utils/ffmpeg.js";
 const getAllVideos = asyncHandler(async (req, res) => {
   // Extracting query parameters from the request
   const {
-    page = 1, 
-    limit = 10, 
-    query = "", 
-    sortBy = "createdAt", 
-    sortType = "desc", 
+    page = 1,
+    limit = 10,
+    query = "",
+    sortBy = "createdAt",
+    sortType = "desc",
     userId, // User ID (optional, to filter videos by a specific user)
   } = req.query;
 
@@ -96,6 +96,10 @@ const publishAVideo = asyncHandler(async (req, res) => {
   // Get file buffers from Multer (since we're using memoryStorage)
   const videoBuffer = req.files?.videoFile?.[0]?.buffer;
   const thumbnailBuffer = req.files?.thumbnail?.[0]?.buffer;
+
+  console.log("Request Files:", req.files);
+  console.log("Request Body:", req.body);
+
 
   if (!videoBuffer) throw new ApiError(400, "Video file is required");
   if (!thumbnailBuffer) throw new ApiError(400, "Thumbnail is required");
