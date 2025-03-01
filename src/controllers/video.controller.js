@@ -231,51 +231,6 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
 });
 
-const togglePublishStatus = asyncHandler(async (req, res) => {
-  /*
-    Extract the videoId from the request parameters.
-    - This is the ID of the video whose publish status we want to toggle.
-  */
-  const { videoId } = req.params;
-
-  // Validate if the provided videoId is a valid MongoDB ObjectId.
-  if (!isValidObjectId(videoId)) {
-    throw new ApiError(400, "Invalid video ID");
-  }
-
-  /*
-    Find the video by its ID.
-    - `findById(videoId)`: Fetches the video document if it exists.
-    - If the video is not found, we throw a 404 error.
-  */
-  const video = await Video.findById(videoId);
-
-  if (!video) {
-    throw new ApiError(404, "Video not found");
-  }
-
-  /*
-    Toggle the `isPublished` status of the video.
-    - If it's `true`, set it to `false`.
-    - If it's `false`, set it to `true`.
-  */
-  video.isPublished = !video.isPublished;
-
-  // Save the updated video status in the database.
-  await video.save();
-
-  /*
-    Send a success response with the updated video details.
-    - `video` contains the updated publish status.
-  */
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, video, "Video publish status toggled successfully")
-    );
-
-
-});
 
 export {
   getAllVideos,
@@ -283,5 +238,4 @@ export {
   getVideoById,
   updateVideo,
   deleteVideo,
-  togglePublishStatus,
 };
