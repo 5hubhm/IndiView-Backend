@@ -9,11 +9,11 @@ import { getVideoDuration } from "../utils/ffmpeg.js";
 const getAllVideos = asyncHandler(async (req, res) => {
   // Extracting query parameters from the request
   const {
-    page = 1,
-    limit = 10,
-    query = "",
-    sortBy = "createdAt",
-    sortType = "desc",
+    page = 1, 
+    limit = 10, 
+    query = "", 
+    sortBy = "createdAt", 
+    sortType = "desc", 
     userId, // User ID (optional, to filter videos by a specific user)
   } = req.query;
 
@@ -267,6 +267,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(200, video, "Video publish status toggled successfully")
     );
+
 
 });
 
