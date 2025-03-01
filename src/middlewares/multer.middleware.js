@@ -1,20 +1,26 @@
 import multer from "multer";
+import path from "path";
+import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
 
-// Check if running on Vercel
-const isVercel = process.env.VERCEL === "true";
+// Detect if running on Vercel
+const isVercel = Boolean(process.env.VERCEL);
 
-const storage = isVercel
-  ? multer.memoryStorage() // Vercel uses memory storage
-  : multer.diskStorage({
-      destination: "uploads/",
-      filename: (req, file, cb) => {
-        cb(null, file.fieldname + "-" + Date.now());
-      },
-    });
+let storage;
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
-});
+if (isVercel) {
+  // Use memory storage on Vercel
+  storage = multer.memoryStorage();
+} else {
+  // Use disk storage locally
+  storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, "./public/temp"); // Local temp storage
+    },
+    filename: function (req, file, cb) {
+      cb(null, Date.now() + path.extname(file.originalname));
+    },
+  });
+}
 
-export { upload };
+export const upload = multer({ storage });
