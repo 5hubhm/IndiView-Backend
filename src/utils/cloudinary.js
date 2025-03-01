@@ -1,30 +1,38 @@
-import { v2 as cloudinary } from "cloudinary"
-import fs from "fs"
+import { v2 as cloudinary } from "cloudinary";
+import streamifier from "streamifier";
+import fs from "fs";
 
-
-// Configuration
+// Cloudinary Configuration
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET // Click 'View API Keys' above to copy your API secret
+    api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadOnCloudinary = async (localFilePath) => {
-    try {
-        if (!localFilePath) return null
-        const response = await cloudinary.uploader.upload(localFilePath, {
-            resource_type: "auto"
-        })
-        //file has been uploaded sucessfully
-        // console.log("File is uploaded on cloudinary", response.url);
-        fs.unlinkSync(localFilePath)
-        return response;
+// Universal Cloudinary Upload Function (Supports Both Paths & Buffers)
+const uploadOnCloudinary = async (file, resourceType = "auto") => {
+    if (!file) return null;
 
+    return new Promise((resolve, reject) => {
+        const uploadCallback = (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+        };
 
-    } catch (error) {
-        fs.unlinkSync(localFilePath) // remove the locally saved temprory file as the upload operation got dailed
+        // Handle Buffer Upload (For Vercel, Video, Thumbnail)
+        if (Buffer.isBuffer(file)) {
+            const stream = cloudinary.uploader.upload_stream({ resource_type: resourceType }, uploadCallback);
+            streamifier.createReadStream(file).pipe(stream);
+        } 
+        // Handle File Path Upload (For Existing Avatar, Cover Image)
+        else {
+            cloudinary.uploader.upload(file, { resource_type: resourceType }, (error, result) => {
+                if (error) return reject(error);
+                resolve(result);
+                fs.unlinkSync(file); // Delete file after upload
+            });
+        }
+    });
+};
 
-    }
-}
-
-export {uploadOnCloudinary}
+export { uploadOnCloudinary };

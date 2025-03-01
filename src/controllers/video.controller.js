@@ -88,72 +88,42 @@ const getAllVideos = asyncHandler(async (req, res) => {
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
-  // Extracting required fields from request body
-  const { title, description, owner } = req.body;
+  const { title, description } = req.body;
 
-  // Validate that the title is not empty
-  if (!title) {
-    throw new ApiError(400, "Title should not be empty");
-  }
-  // Validate that the description is not empty
-  if (!description) {
-    throw new ApiError(400, "Description should not be empty");
-  }
+  if (!title) throw new ApiError(400, "Title should not be empty");
+  if (!description) throw new ApiError(400, "Description should not be empty");
 
-  // Extract the video file path from the uploaded files
-  const videoFileLocalPath = req.files?.videoFile[0]?.path;
-  if (!videoFileLocalPath) {
-    throw new ApiError(400, "Video file is required");
-  }
+  // Get file buffers from Multer (since we're using memoryStorage)
+  const videoBuffer = req.files?.videoFile?.[0]?.buffer;
+  const thumbnailBuffer = req.files?.thumbnail?.[0]?.buffer;
 
-  // Extract the thumbnail file path from the uploaded files
-  const thumbnailLocalPath = req.files?.thumbnail[0]?.path;
-  if (!thumbnailLocalPath) {
-    throw new ApiError(400, "Thumbnail is required");
-  }
+  if (!videoBuffer) throw new ApiError(400, "Video file is required");
+  if (!thumbnailBuffer) throw new ApiError(400, "Thumbnail is required");
 
   try {
-    // Get the duration of the video file before uploading
-    const duration = await getVideoDuration(videoFileLocalPath);
+    // Upload video to Cloudinary
+    const videoFile = await uploadOnCloudinary(videoBuffer, "video");
+    if (!videoFile) throw new ApiError(400, "Cloudinary Error: Video upload failed");
 
-    // Upload the video file to Cloudinary and get the URL
-    const videoFile = await uploadOnCloudinary(videoFileLocalPath);
-    if (!videoFile) {
-      throw new ApiError(400, "Cloudinary Error: Video file is required");
-    }
+    // Upload thumbnail to Cloudinary
+    const thumbnail = await uploadOnCloudinary(thumbnailBuffer, "image");
+    if (!thumbnail) throw new ApiError(400, "Cloudinary Error: Thumbnail upload failed");
 
-    // Upload the thumbnail image to Cloudinary and get the URL
-    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
-    if (!thumbnail) {
-      throw new ApiError(400, "Cloudinary Error: Thumbnail is required");
-    }
-
-    // Store video details in the database
+    // Save video details in the database
     const videoDoc = await Video.create({
-      videoFile: videoFile.url, // Cloudinary URL of the video file
-      thumbnail: thumbnail.url, // Cloudinary URL of the thumbnail
+      videoFile: videoFile.url,
+      thumbnail: thumbnail.url,
       title,
       description,
-      owner: req.user?._id, // ID of the user who uploaded the video
-      duration, // Duration of the video (in seconds)
+      owner: req.user?._id,
     });
 
-    console.log(` Title: ${title}, Owner: ${owner}, duration: ${duration}`);
-
-    // If video creation fails, throw an error
-    if (!videoDoc) {
-      throw new ApiError(500, "Something went wrong while publishing a video");
-    }
-
-    // Send a success response with the video details
-    return res
-      .status(201)
-      .json(new ApiResponse(201, videoDoc, "Video published Successfully"));
+    return res.status(201).json(new ApiResponse(201, videoDoc, "Video published successfully"));
   } catch (error) {
-    // Handle errors and send a 500 response if something goes wrong
-    throw new ApiError(500, error);
+    throw new ApiError(500, error.message || "Server error");
   }
 });
+
 
 const getVideoById = asyncHandler(async (req, res) => {
   // Extract the videoId from request parameters
