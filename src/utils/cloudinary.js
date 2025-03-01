@@ -8,7 +8,26 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadOnCloudinary = async (file) => {
+// Helper function to upload buffers to Cloudinary
+const uploadBufferToCloudinary = (buffer, resourceType) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { resource_type: resourceType },
+      (error, result) => {
+        if (error) {
+          console.error("Cloudinary Upload Error:", error);
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+    uploadStream.end(buffer);
+  });
+};
+
+// Main Upload Function
+const uploadOnCloudinary = async (file, resourceType = "auto") => {
   try {
     if (!file) return null;
 
@@ -16,20 +35,11 @@ const uploadOnCloudinary = async (file) => {
 
     if (file.buffer) {
       // Upload buffer (Vercel)
-      response = await cloudinary.uploader.upload_stream(
-        { resource_type: "auto" },
-        (error, result) => {
-          if (error) {
-            console.error("Cloudinary Upload Error:", error);
-            return null;
-          }
-          return result;
-        }
-      ).end(file.buffer);
+      response = await uploadBufferToCloudinary(file.buffer, resourceType);
     } else {
       // Upload from local path (Local)
       response = await cloudinary.uploader.upload(file.path, {
-        resource_type: "auto",
+        resource_type: resourceType,
       });
       fs.unlinkSync(file.path); // Remove local temp file after upload
     }

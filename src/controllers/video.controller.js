@@ -93,30 +93,29 @@ const publishAVideo = asyncHandler(async (req, res) => {
   if (!title) throw new ApiError(400, "Title should not be empty");
   if (!description) throw new ApiError(400, "Description should not be empty");
 
-  // Get file buffers from Multer (since we're using memoryStorage)
-  const videoBuffer = req.files?.videoFile?.[0]?.buffer;
-  const thumbnailBuffer = req.files?.thumbnail?.[0]?.buffer;
+  // Get files from Multer
+  const videoFile = req.files?.videoFile?.[0];
+  const thumbnailFile = req.files?.thumbnail?.[0];
 
   console.log("Request Files:", req.files);
   console.log("Request Body:", req.body);
 
-
-  if (!videoBuffer) throw new ApiError(400, "Video file is required");
-  if (!thumbnailBuffer) throw new ApiError(400, "Thumbnail is required");
+  if (!videoFile) throw new ApiError(400, "Video file is required");
+  if (!thumbnailFile) throw new ApiError(400, "Thumbnail is required");
 
   try {
-    // Upload video to Cloudinary
-    const videoFile = await uploadOnCloudinary(videoBuffer, "video");
-    if (!videoFile) throw new ApiError(400, "Cloudinary Error: Video upload failed");
+    // Upload video
+    const uploadedVideo = await uploadOnCloudinary(videoFile, "video");
+    if (!uploadedVideo) throw new ApiError(400, "Cloudinary Error: Video upload failed");
 
-    // Upload thumbnail to Cloudinary
-    const thumbnail = await uploadOnCloudinary(thumbnailBuffer, "image");
-    if (!thumbnail) throw new ApiError(400, "Cloudinary Error: Thumbnail upload failed");
+    // Upload thumbnail
+    const uploadedThumbnail = await uploadOnCloudinary(thumbnailFile, "image");
+    if (!uploadedThumbnail) throw new ApiError(400, "Cloudinary Error: Thumbnail upload failed");
 
     // Save video details in the database
     const videoDoc = await Video.create({
-      videoFile: videoFile.url,
-      thumbnail: thumbnail.url,
+      videoFile: uploadedVideo.url,
+      thumbnail: uploadedThumbnail.url,
       title,
       description,
       owner: req.user?._id,
@@ -127,7 +126,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
     throw new ApiError(500, error.message || "Server error");
   }
 });
-
 
 const getVideoById = asyncHandler(async (req, res) => {
   // Extract the videoId from request parameters

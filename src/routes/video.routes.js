@@ -18,14 +18,8 @@ router
   .get(getAllVideos)
   .post(
     upload.fields([
-      {
-        name: "videoFile",
-        maxCount: 1,
-      },
-      {
-        name: "thumbnail",
-        maxCount: 1,
-      },
+      { name: "videoFile", maxCount: 1 },
+      { name: "thumbnail", maxCount: 1 },
     ]),
     publishAVideo
   );
