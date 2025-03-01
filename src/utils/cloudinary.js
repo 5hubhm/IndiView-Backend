@@ -29,5 +29,4 @@ const uploadOnCloudinary = async (file) => {
     }
 };
 
-
 export { uploadOnCloudinary };
