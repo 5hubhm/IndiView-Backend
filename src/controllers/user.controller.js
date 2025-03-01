@@ -85,7 +85,6 @@ const loginUser = asyncHandler(async (req, res) => {
   // It checks user credentials and returns access & refresh tokens
 
   const { email, username, password } = req.body; // Extract email, username & password from request
-  console.log(email); // Debugging: logs email to see if it was received
 
   if (!username && !email) {
     // If neither username nor email is provided, throw an error

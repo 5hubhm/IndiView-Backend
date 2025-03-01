@@ -59,23 +59,6 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     .status(201)
     .json(new ApiResponse(201, {}, "Subscribed successfully"));
 
-  /*
-
- Toggling Subscription - Notes: 
-
-  👉 What does `Subscription.findOne()` do?
-     - Searches for an existing subscription in the database.
-     - If found, we remove it (unsubscribe). Otherwise, we create a new one (subscribe).
-
-  👉 Why use `findByIdAndDelete()` instead of `deleteOne()`?
-     - `findByIdAndDelete()` finds a document by its `_id` and removes it in one step.
-     - `deleteOne({ ... })` works too, but we already have the exact `_id`, so it's faster.
-
-  👉 Why use `.toString()` when comparing ObjectIds?
-     - MongoDB IDs are objects, so `===` won’t work directly.
-     - `.toString()` ensures they can be compared properly.
-     
-*/
 });
 
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
@@ -112,61 +95,6 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
       new ApiResponse(200, subscribersDocs, "Subscribers fetched successfully")
     );
 
-  /*
-     Breaking it Down: Why We Search by `channel` and Not `subscriber`?
-    
-    - Consider we have,
-     users: a, b, c, d 
-     and
-     channels (channels are also users): 'Chai aur code', 'Piyush Garg', 'CWH'
-
-    consider,
-    * * * * * * * * * * * * * * *  
-    * channel -> Chai aur code  *
-    * subscriber -> a           *
-    * * * * * * * * * * * * * * * 
-    
-    * * * * * * * * * * * * * * *
-    * channel -> Chai aur code  *
-    * subscriber -> b           *
-    * * * * * * * * * * * * * * * 
-    
-    * * * * * * * * * * * * * * *
-    * channel -> Chai aur code  *
-    * subscriber -> c           *
-    * * * * * * * * * * * * * * * 
-    
-    * * * * * * * * * * * * * * *
-    * channel -> Piyush Garg      *
-    * subscriber -> c           *
-    * * * * * * * * * * * * * * * 
-    
-    * * * * * * * * * * * * * * *
-    * channel -> CWH         *
-    * subscriber -> c                 *
-    * * * * * * * * * * * * * * * 
-    
-    Now to get channel subscribers of 'chai aur code' channel (this channel is also a user too), we will count the docs where " channel -> Chai aur Code "
-    Hence, user 'chai aur code' have total 3 subs   
-    
- */
-
-  /* 
- Fetching Channel Subscribers - Notes:
-
-👉 Why do we use `req.user._id` instead of `req.params.channelId`?
-   - The authenticated user (the one making the request) is the owner of the channel.
-   - This ensures that users can only fetch their own subscribers, preventing unauthorized access.
-
-👉 What does `.populate("subscriber", "_id name email")` do?
-   - By default, the `Subscription` collection stores only the `subscriber` ID.
-   - `.populate("subscriber", "_id name email")` replaces the ID with actual subscriber details (name, email, etc.).
-   - This reduces the need for multiple database queries and makes the response more useful.
-
-👉 Alternative ways to fetch subscribers?
-   - `Subscription.find({ channel: channelId }).lean()`: Returns a plain JavaScript object instead of a Mongoose document.
-   
- */
 });
 
 const getSubscribedChannels = asyncHandler(async (req, res) => {
@@ -206,44 +134,6 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
       )
     );
 
-    /*
-     Breaking it Down: Why We Search by `subscriber` and Not `channel`, to get the list of channels a user has subscribed to
-    
-    - Consider we have,
-     users: a, b, c, d 
-     and
-     channels: 'Chai aur code', 'Piyush Garg', 'CWH'
-
-    consider,
-    * * * * * * * * * * * * * * *  
-    * channel -> Chai aur code  *
-    * subscriber -> a           *
-    * * * * * * * * * * * * * * * 
-    
-    * * * * * * * * * * * * * * *
-    * channel -> Chai aur code  *
-    * subscriber -> b           *
-    * * * * * * * * * * * * * * * 
-    
-    * * * * * * * * * * * * * * *
-    * channel -> Chai aur code  *
-    * subscriber -> c           *
-    * * * * * * * * * * * * * * * 
-    
-    * * * * * * * * * * * * * * *
-    * channel -> Piyush Garg      *
-    * subscriber -> c           *
-    * * * * * * * * * * * * * * * 
-    
-    * * * * * * * * * * * * * * *
-    * channel -> CWH         *
-    * subscriber -> c                 *
-    * * * * * * * * * * * * * * * 
-    
-    Now to get list of channels that user c has subscribed to, we will count the docs where " subscriber -> c "
-    Hence, user 'user c' subscribed to total 3 channels   
-    
- */
 });
 
 export { toggleSubscription, getUserChannelSubscribers, getSubscribedChannels };
