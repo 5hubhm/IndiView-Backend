@@ -108,6 +108,9 @@ const publishAVideo = asyncHandler(async (req, res) => {
     const uploadedVideo = await uploadOnCloudinary(videoFile, "video");
     if (!uploadedVideo) throw new ApiError(400, "Cloudinary Error: Video upload failed");
 
+    // **Extract duration from Cloudinary response**
+    const videoDuration = uploadedVideo.duration || 0;
+
     // Upload thumbnail
     const uploadedThumbnail = await uploadOnCloudinary(thumbnailFile, "image");
     if (!uploadedThumbnail) throw new ApiError(400, "Cloudinary Error: Thumbnail upload failed");
@@ -118,6 +121,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
       thumbnail: uploadedThumbnail.url,
       title,
       description,
+      duration: videoDuration, // **Save the duration**
       owner: req.user?._id,
     });
 
@@ -126,6 +130,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     throw new ApiError(500, error.message || "Server error");
   }
 });
+
 
 const getVideoById = asyncHandler(async (req, res) => {
   // Extract the videoId from request parameters
