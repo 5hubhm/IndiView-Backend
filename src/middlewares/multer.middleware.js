@@ -1,21 +1,20 @@
-// import multer from "multer";
-
-// const storage = multer.diskStorage({
-//     destination: function(req, file, cb){
-//         cb(null, "./public/temp")
-//     },
-//     filename: function (req, file, cb){
-//         cb(null, file.originalname)
-//     }
-// })
-
-// export const upload = multer({
-//     storage,
-// })
-
 import multer from "multer";
 
-const storage = multer.memoryStorage(); // Store files in memory
+// Check if running on Vercel
+const isVercel = process.env.VERCEL === "true";
 
-export const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } }); // Limit to 50MB
+const storage = isVercel
+  ? multer.memoryStorage() // Vercel uses memory storage
+  : multer.diskStorage({
+      destination: "uploads/",
+      filename: (req, file, cb) => {
+        cb(null, file.fieldname + "-" + Date.now());
+      },
+    });
 
+const upload = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+});
+
+export { upload };

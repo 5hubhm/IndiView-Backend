@@ -9,17 +9,25 @@ cloudinary.config({
 });
 
 // Upload File to Cloudinary (Supports Buffers)
-const uploadOnCloudinary = async (fileBuffer, resourceType = "auto") => {
-    return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-            { resource_type: resourceType },
+const uploadOnCloudinary = async (file) => {
+    try {
+        if (!file) return null;
+
+        // Upload file from buffer if using memory storage
+        const response = await cloudinary.uploader.upload_stream(
+            { resource_type: "auto" },
             (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
+                if (error) throw new Error("Cloudinary Upload Failed");
+                return result;
             }
-        );
-        streamifier.createReadStream(fileBuffer).pipe(stream);
-    });
+        ).end(file.buffer); // Use buffer instead of file path
+
+        return response;
+    } catch (error) {
+        console.error("Cloudinary Upload Error:", error);
+        return null;
+    }
 };
+
 
 export { uploadOnCloudinary };
