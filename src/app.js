@@ -11,9 +11,8 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: "16kb" }));
-
-app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+app.use(express.json({ limit: "100mb" })); // For JSON requests
+app.use(express.urlencoded({ limit: "100mb", extended: true })); // For form data
 
 app.use(express.static("public"));
 

@@ -142,7 +142,7 @@ const loginUser = asyncHandler(async (req, res) => {
       )
     );
 
-  });
+});
 
 const logoutUser = asyncHandler(async (req, res) => {
   // This function logs out the user by removing their refresh token from the database
@@ -159,10 +159,10 @@ const logoutUser = asyncHandler(async (req, res) => {
     }
   );
 
- 
+
   const options = {
     httpOnly: true, // Ensures cookies can't be accessed via JavaScript (security measure)
-    secure: true, 
+    secure: true,
     sameSite: "None",// Ensures cookies are only sent over HTTPS
   };
 
@@ -582,7 +582,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
 
   // Step 5: Send the response with the watch history
   return res
-    .status(200) 
+    .status(200)
     .json(
       new ApiResponse(
         200,
