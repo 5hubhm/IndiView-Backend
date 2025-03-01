@@ -155,55 +155,53 @@ const getVideoById = asyncHandler(async (req, res) => {
 });
 
 const updateVideo = asyncHandler(async (req, res) => {
-  // Extract videoId from request parameters
   const { videoId } = req.params;
-
-  // Extract title and description from request body
   const { title, description } = req.body;
 
-  // Validate if the provided videoId is a valid MongoDB ObjectId
   if (!isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid video ID");
   }
 
-  // Create an object to hold updateData for updating title, description and thumbnail(thumbnail will be appended later)
-  let updateData = { title, description };
-
-  if (req.file) {
-    const thumbnailLocalPath = req.file.path;
-
-    if (!thumbnailLocalPath) {
-      throw new ApiError(400, "Thumbnail file is missing");
-    }
-
-    // Upload the thumbnail to Cloudinary
-    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
-
-    if (!thumbnail.url) {
-      throw new ApiError(400, "Error while uploading thumbnail");
-    }
-
-    // Add the new thumbnail URL to the updateData
-    updateData.thumbnail = thumbnail.url;
-  }
-
-  const updatedVideo = await Video.findByIdAndUpdate(
-    videoId,
-    { $set: updateData },
-    { new: true, runValidators: true }
-  );
-
-  // If the video is not found, return error.
-  if (!updatedVideo) {
+  // Fetch the existing video to ensure it exists
+  const existingVideo = await Video.findById(videoId);
+  if (!existingVideo) {
     throw new ApiError(404, "Video not found");
   }
 
-  // Send a success response with the updated video details.
-  return res
-    .status(200)
-    .json(new ApiResponse(200, updatedVideo, "Video updated successfully"));
+  // Get files from Multer
+  const thumbnailFile = req.files?.thumbnail?.[0];
 
+  console.log("Request Files:", req.files);
+  console.log("Request Body:", req.body);
 
+  try {
+    let uploadedThumbnail;
+
+    // Upload new thumbnail if provided
+    if (thumbnailFile) {
+      uploadedThumbnail = await uploadOnCloudinary(thumbnailFile, "image");
+      if (!uploadedThumbnail) {
+        throw new ApiError(400, "Cloudinary Error: Thumbnail upload failed");
+      }
+    }
+
+    // Prepare update data dynamically
+    let updateData = {};
+    if (title) updateData.title = title;
+    if (description) updateData.description = description;
+    if (uploadedThumbnail?.url) updateData.thumbnail = uploadedThumbnail.url;
+
+    // Update video in database
+    const updatedVideo = await Video.findByIdAndUpdate(
+      videoId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    return res.status(200).json(new ApiResponse(200, updatedVideo, "Video updated successfully"));
+  } catch (error) {
+    throw new ApiError(500, error.message || "Server error");
+  }
 });
 
 const deleteVideo = asyncHandler(async (req, res) => {
