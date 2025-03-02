@@ -268,10 +268,6 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  /*
-  Function to update user's account details (like full name and email)
-  It takes data from the request body, updates it in the database, and returns the updated user details
-*/
 
   const { fullName, email } = req.body; // Extracting fullName and email from request body
 
@@ -393,8 +389,6 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-  // Function to get the profile details of a user's channel
-  // This function retrieves user info, subscriber count, subscription count and checks if the logged-in user is subscribed
 
   const { username } = req.params; // Extracting the username from request parameters
 
@@ -403,29 +397,13 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     throw new ApiError(400, "username is missing");
   }
 
-  /*
-    Aggregation Pipeline: A powerful way to process data in MongoDB
-    - Here, we're fetching user details along with subscriber and subscription information
-  */
   const channel = await User.aggregate([
     {
-      /*
-        Step 1: Find the user by username
-        - 'match' operator filters the documents to only include users with the given username.
-      */
       $match: {
         username: username?.toLowerCase(),
       },
     },
     {
-      /*
-        Step 2: Fetch all people who have subscribed to this user's channel
-        - Think of it like checking who follows you on a social media platform.
-
-        'lookup' operator: Joins data from another collection (like SQL JOIN)
-        - Fetching all subscriptions where this user is the "channel"
-        - This gives us all the people who have subscribed to this user's channel
-      */
       $lookup: {
         from: "subscriptions", // Collection name to join with
         localField: "_id", // Matching user ID in User collection
@@ -435,10 +413,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       },
     },
     {
-      /*
-        Step 3: Fetch all the channels this user has subscribed to
-        - This is like checking which YouTube channels you are following.
-      */
       $lookup: {
         from: "subscriptions",
         localField: "_id",
@@ -447,12 +421,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       },
     },
     {
-      /*
-        Step 4: Calculate extra details using 'addFields' operator
-        - Count total subscribers
-        - Count total channels the user has subscribed to
-        - Check if the logged-in user is already subscribed to this channel
-      */
       $addFields: {
         subscribersCount: {
           $size: "$subscribers", // Count how many documents (subscribers) are in the "subscribers" array
@@ -470,10 +438,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       },
     },
     {
-      /*
-        Step 5: Project (select) only the necessary fields to return
-        - This reduces data load and keeps responses efficient.
-      */
       $project: {
         fullName: 1, // Include full name of the user
         username: 1, // Include username
@@ -502,34 +466,14 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {
-  // Function to get the watch history of a user
-  // This function retrieves the videos a user has watched along with the details of the video owner
 
-  /*
-    Step 1: Find the user in the database using aggregation
-  */
   const user = await User.aggregate([
     {
       $match: {
         _id: new mongoose.Types.ObjectId(req.user._id), // Convert user ID to ObjectId and match it in the database
       },
     },
-
-    /*
-        Step 1.1: Convert user ID to ObjectId and match it in the database
-        - req.user._id is a string representation of the user's ID.
-        - MongoDB stores IDs as ObjectId (a special type of ID used for indexing and efficiency).
-        - We use 'new mongoose.Types.ObjectId()' to convert the string into an ObjectId.
-        - This ensures we can correctly match the user in the database.
-        - If we don't do this conversion, MongoDB might not find the user because it's expecting an ObjectId.
-      */
-
     {
-      /*
-        Step 2: Fetch user's watch history using $lookup
-        - The 'watchHistory' field in User contains an array of video IDs the user has watched
-        - We use $lookup to match these IDs with actual videos in the 'videos' collection
-      */
       $lookup: {
         from: "videos", // Collection where videos are stored
         localField: "watchHistory", // Field in 'User collection' that stores watched video IDs
@@ -539,12 +483,6 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         pipeline: [
           // A sub-pipeline to fetch additional details
           {
-            /*
-              Step 3: Fetch video owner details
-              - Each video has an 'owner' field that stores the ID of the uploader
-              - We use $lookup again to match this ID with the 'users' collection
-              - This allows us to fetch the owner's details (name, username, avatar)
-            */
             $lookup: {
               from: "users", // Collection where user details are stored
               localField: "owner", // Field in 'Users collection' storing owner ID
@@ -563,11 +501,6 @@ const getWatchHistory = asyncHandler(async (req, res) => {
             },
           },
           {
-            /*
-              Step 4: Convert 'owner' array into a single object using $addFields
-              - $lookup returns an array, even if there is only one owner
-              - We extract the first (and only) owner using $first
-            */
             $addFields: {
               owner: {
                 $first: "$owner", // Extract first element from 'owner' array
