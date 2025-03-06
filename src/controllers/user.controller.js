@@ -84,15 +84,14 @@ const loginUser = asyncHandler(async (req, res) => {
   // This function handles user login requests
   // It checks user credentials and returns access & refresh tokens
 
-  const { email, username, password } = req.body; // Extract email, username & password from request
+  const { identifier, password } = req.body;
 
-  if (!username && !email) {
-    // If neither username nor email is provided, throw an error
-    throw new ApiError(400, "username or email is required");
+  if (!identifier) {
+    throw new ApiError(400, "Username or Email is required");
   }
 
   const user = await User.findOne({
-    $or: [{ username }, { email }], // Search for user by either email or username
+    $or: [{ username: identifier }, { email: identifier }], // Check both fields
   });
 
 
