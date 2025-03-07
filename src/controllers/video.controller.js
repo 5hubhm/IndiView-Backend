@@ -20,12 +20,16 @@ const getAllVideos = asyncHandler(async (req, res) => {
   }
 
   // If userId is not provided, default to fetching logged-in user's videos
-  const filterUserId = userId || req.user._id;  
+  const filterUserId = userId || req.user._id;
+
+  console.log("Logged-in User ID:", req.user._id);
+  console.log("Filter User ID:", filterUserId);
+
 
   // Constructing the match object
   const match = {
     ...(query ? { title: { $regex: query, $options: "i" } } : {}),
-    owner: mongoose.Types.ObjectId(filterUserId), // Only fetch logged-in user's videos
+    owner: new mongoose.Types.ObjectId(filterUserId),// Only fetch logged-in user's videos
   };
 
   const videos = await Video.aggregate([
