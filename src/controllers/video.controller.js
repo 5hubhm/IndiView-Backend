@@ -6,68 +6,85 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
+  // Extracting query parameters from the request
   const {
     page = 1,
     limit = 10,
     query = "",
     sortBy = "createdAt",
     sortType = "desc",
-    userId, // optional: filter by specific user ID
+    userId, // User ID (optional, to filter videos by a specific user)
   } = req.query;
 
   if (!req.user) {
     throw new ApiError(401, "User needs to be logged in");
   }
 
-  // If userId is not provided, default to fetching logged-in user's videos
-  const filterUserId = userId || req.user._id;
-
-  console.log("Logged-in User ID:", req.user._id);
-  console.log("Filter User ID:", filterUserId);
-
-
-  // Constructing the match object
+  // Constructing the match object to filter videos
   const match = {
-    ...(query ? { title: { $regex: query, $options: "i" } } : {}),
-    owner: new mongoose.Types.ObjectId(filterUserId),// Only fetch logged-in user's videos
+    ...(query ? { title: { $regex: query, $options: "i" } } : {}), // If query exists, match titles that contain the search term (case-insensitive)
+    ...(userId ? { owner: mongoose.Types.ObjectId(userId) } : {}), // If userId exists, filter videos by that owner
   };
 
   const videos = await Video.aggregate([
-    { $match: match },
+    {
+      $match: match, // Filtering videos based on the match criteria
+    },
+
     {
       $lookup: {
-        from: "users",
-        localField: "owner",
-        foreignField: "_id",
-        as: "videosByOwner",
+        from: "users", // Collection to join with
+        localField: "owner", // Matching "owner" field in the videos collection
+        foreignField: "_id", // Matching "_id" field in the users collection
+        as: "videosByOwner", // The resulting user data will be stored under "videosByOwner"
       },
     },
+
     {
+      /*
+        $project: Selecting only the necessary fields to return in the response
+
+      */
       $project: {
-        videoFile: 1,
-        thumbnail: 1,
-        title: 1,
-        description: 1,
-        duration: 1,
-        views: 1,
-        isPublished: 1,
-        owner: { $arrayElemAt: ["$videosByOwner", 0] },
+        videoFile: 1, // Video file link
+        thumbnail: 1, // Thumbnail image link
+        title: 1, // Video title
+        description: 1, // Video description
+        duration: 1, // Video duration
+        views: 1, // Number of views
+        isPublished: 1, // Whether the video is published or not
+        owner: {
+          $arrayElemAt: ["$videosByOwner", 0], // Extracts the first user object from the array
+        },
       },
     },
-    { $sort: { [sortBy]: sortType === "desc" ? -1 : 1 } },
-    { $skip: (page - 1) * parseInt(limit) },
-    { $limit: parseInt(limit) },
+
+    {
+      $sort: {
+        [sortBy]: sortType === "desc" ? -1 : 1,
+      },
+    },
+
+    {
+      $skip: (page - 1) * parseInt(limit),
+    },
+
+    {
+      $limit: parseInt(limit),
+    },
   ]);
 
-  if (!videos.length) {
-    throw new ApiError(404, "Videos not found");
+  // If no videos are found, throw an error
+  if (!videos?.length) {
+    throw new ApiError(404, "Videos are not found");
   }
 
+  // Sending the response with a success message
   return res
     .status(200)
     .json(new ApiResponse(200, videos, "Videos fetched successfully"));
-});
 
+});
 
 const publishAVideo = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
@@ -78,6 +95,9 @@ const publishAVideo = asyncHandler(async (req, res) => {
   // Get files from Multer
   const videoFile = req.files?.videoFile?.[0];
   const thumbnailFile = req.files?.thumbnail?.[0];
+
+  console.log("Request Files:", req.files);
+  console.log("Request Body:", req.body);
 
   if (!videoFile) throw new ApiError(400, "Video file is required");
   if (!thumbnailFile) throw new ApiError(400, "Thumbnail is required");
@@ -109,6 +129,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     throw new ApiError(500, error.message || "Server error");
   }
 });
+
 
 const getVideoById = asyncHandler(async (req, res) => {
   // Extract the videoId from request parameters
