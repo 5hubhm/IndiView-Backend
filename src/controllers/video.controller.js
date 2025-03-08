@@ -70,37 +70,20 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 
 const publishAVideo = asyncHandler(async (req, res) => {
-  const { title, description } = req.body;
+  const { title, description, videoFile, thumbnail } = req.body; // Get URLs directly from frontend
 
   if (!title) throw new ApiError(400, "Title should not be empty");
   if (!description) throw new ApiError(400, "Description should not be empty");
-
-  // Get files from Multer
-  const videoFile = req.files?.videoFile?.[0];
-  const thumbnailFile = req.files?.thumbnail?.[0];
-
-  if (!videoFile) throw new ApiError(400, "Video file is required");
-  if (!thumbnailFile) throw new ApiError(400, "Thumbnail is required");
+  if (!videoFile) throw new ApiError(400, "Video URL is required");
+  if (!thumbnail) throw new ApiError(400, "Thumbnail URL is required");
 
   try {
-    // Upload video
-    const uploadedVideo = await uploadOnCloudinary(videoFile, "video");
-    if (!uploadedVideo) throw new ApiError(400, "Cloudinary Error: Video upload failed");
-
-    // **Extract duration from Cloudinary response**
-    const videoDuration = uploadedVideo.duration || 0;
-
-    // Upload thumbnail
-    const uploadedThumbnail = await uploadOnCloudinary(thumbnailFile, "image");
-    if (!uploadedThumbnail) throw new ApiError(400, "Cloudinary Error: Thumbnail upload failed");
-
     // Save video details in the database
     const videoDoc = await Video.create({
-      videoFile: uploadedVideo.url,
-      thumbnail: uploadedThumbnail.url,
+      videoFile, // Already a URL
+      thumbnail, // Already a URL
       title,
       description,
-      duration: videoDuration, // **Save the duration**
       owner: req.user?._id,
     });
 
@@ -109,6 +92,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     throw new ApiError(500, error.message || "Server error");
   }
 });
+
 
 const getVideoById = asyncHandler(async (req, res) => {
   // Extract the videoId from request parameters
