@@ -40,6 +40,7 @@ const uploadOnCloudinary = async (file, resourceType = "auto") => {
       // Upload from local path (Local)
       response = await cloudinary.uploader.upload(file.path, {
         resource_type: resourceType,
+        chunk_size: 6000000, // 6MB chunks to allow large file uploads
       });
       fs.unlinkSync(file.path); // Remove local temp file after upload
     }
@@ -50,5 +51,6 @@ const uploadOnCloudinary = async (file, resourceType = "auto") => {
     return null;
   }
 };
+
 
 export { uploadOnCloudinary };
