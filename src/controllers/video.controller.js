@@ -70,25 +70,48 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 
 const publishAVideo = asyncHandler(async (req, res) => {
-  const { title, description, videoFile, thumbnail } = req.body; // Get URLs directly from frontend
+  const { title, description } = req.body;
 
   if (!title) throw new ApiError(400, "Title should not be empty");
   if (!description) throw new ApiError(400, "Description should not be empty");
-  if (!videoFile) throw new ApiError(400, "Video URL is required");
-  if (!thumbnail) throw new ApiError(400, "Thumbnail URL is required");
+
+  const videoFile = req.files?.videoFile?.[0];
+  const thumbnailFile = req.files?.thumbnail?.[0];
+
+  if (!videoFile) throw new ApiError(400, "Video file is required");
+  if (!thumbnailFile) throw new ApiError(400, "Thumbnail is required");
 
   try {
-    // Save video details in the database
+    // Upload video
+    const uploadedVideo = await uploadOnCloudinary(videoFile, "video");
+
+    if (!uploadedVideo || !uploadedVideo.secure_url) {
+      throw new ApiError(400, "Cloudinary Error: Video upload failed");
+    }
+
+    console.log("Uploaded Video Response:", uploadedVideo); // Debugging
+
+    const videoDuration = uploadedVideo.duration ? parseFloat(uploadedVideo.duration).toFixed(2) : 0;
+
+    // Upload thumbnail
+    const uploadedThumbnail = await uploadOnCloudinary(thumbnailFile, "image");
+    if (!uploadedThumbnail || !uploadedThumbnail.secure_url) {
+      throw new ApiError(400, "Cloudinary Error: Thumbnail upload failed");
+    }
+
+    // Save video details
     const videoDoc = await Video.create({
-      videoFile, // Already a URL
-      thumbnail, // Already a URL
+      videoFile: uploadedVideo.secure_url,
+      thumbnail: uploadedThumbnail.secure_url,
       title,
       description,
+      duration: videoDuration,
       owner: req.user?._id,
     });
 
     return res.status(201).json(new ApiResponse(201, videoDoc, "Video published successfully"));
   } catch (error) {
+    console.error("Publish Video Error:", error); // Debugging
     throw new ApiError(500, error.message || "Server error");
   }
 });
