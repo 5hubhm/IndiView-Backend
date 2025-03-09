@@ -43,16 +43,17 @@ const getAllVideos = asyncHandler(async (req, res) => {
         title: 1,
         description: 1,
         duration: 1,
-        views: 1,        // 🔥 Include views
-        createdAt: 1,    // 🔥 Include upload time
+        views: 1,
         isPublished: 1,
-        owner: { $arrayElemAt: ["$videosByOwner", 0] },
+        createdAt: 1,
+        owner: {
+          $arrayElemAt: ["$videosByOwner", 0],
+        },
+        ownerName: { $arrayElemAt: ["$videosByOwner.name", 0] }, // ✅ Extract user name
       },
     },
-    { $sort: { [sortBy]: sortType === "desc" ? -1 : 1 } },
-    { $skip: (page - 1) * parseInt(limit) },
-    { $limit: parseInt(limit) },
   ]);
+
 
   if (!videos.length) {
     throw new ApiError(404, "Videos not found");
