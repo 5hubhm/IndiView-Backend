@@ -12,24 +12,18 @@ const getAllVideos = asyncHandler(async (req, res) => {
     query = "",
     sortBy = "createdAt",
     sortType = "desc",
-    userId, // optional: filter by specific user ID
+    userId,
   } = req.query;
 
   if (!req.user) {
     throw new ApiError(401, "User needs to be logged in");
   }
 
-  // If userId is not provided, default to fetching logged-in user's videos
   const filterUserId = userId || req.user._id;
 
-  console.log("Logged-in User ID:", req.user._id);
-  console.log("Filter User ID:", filterUserId);
-
-
-  // Constructing the match object
   const match = {
     ...(query ? { title: { $regex: query, $options: "i" } } : {}),
-    owner: new mongoose.Types.ObjectId(filterUserId),// Only fetch logged-in user's videos
+    owner: new mongoose.Types.ObjectId(filterUserId),
   };
 
   const videos = await Video.aggregate([
@@ -49,7 +43,8 @@ const getAllVideos = asyncHandler(async (req, res) => {
         title: 1,
         description: 1,
         duration: 1,
-        views: 1,
+        views: 1,        // 🔥 Include views
+        createdAt: 1,    // 🔥 Include upload time
         isPublished: 1,
         owner: { $arrayElemAt: ["$videosByOwner", 0] },
       },
@@ -63,11 +58,8 @@ const getAllVideos = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Videos not found");
   }
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, videos, "Videos fetched successfully"));
+  return res.status(200).json(new ApiResponse(200, videos, "Videos fetched successfully"));
 });
-
 
 const publishAVideo = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
