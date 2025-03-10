@@ -388,72 +388,81 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-  const { username, userId } = req.params; // Extract username or userId
 
-  // Validate input: At least one parameter (username or userId) must be provided
-  if (!username?.trim() && !userId?.trim()) {
-    throw new ApiError(400, "username or userId is required");
+  const { username } = req.params; // Extracting the username from request parameters
+
+  // If username is missing or just empty spaces, throw an error
+  if (!username?.trim()) {
+    throw new ApiError(400, "username is missing");
   }
 
-  // Construct query based on available parameter
-  const matchQuery = userId
-    ? { _id: new mongoose.Types.ObjectId(userId) } // Match by userId if provided
-    : { username: username.toLowerCase() }; // Match by username (case insensitive)
-
   const channel = await User.aggregate([
-    { $match: matchQuery },
+    {
+      $match: {
+        username: username?.toLowerCase(),
+      },
+    },
     {
       $lookup: {
-        from: "subscriptions",
-        localField: "_id",
-        foreignField: "channel",
-        as: "subscribers",
+        from: "subscriptions", // Collection name to join with
+        localField: "_id", // Matching user ID in User collection
+        foreignField: "channel", // Matching with "channel" field in Subscriptions collection
+
+        as: "subscribers", // The result is stored in "subscribers"
       },
     },
     {
       $lookup: {
         from: "subscriptions",
         localField: "_id",
-        foreignField: "subscriber",
-        as: "subscribedTo",
+        foreignField: "subscriber", // Match where this user appears as a "subscriber"
+        as: "subscribedTo", // Store the result in a field called "subscribedTo"
       },
     },
     {
       $addFields: {
-        subscribersCount: { $size: "$subscribers" },
-        channelsSubscribedToCount: { $size: "$subscribedTo" },
+        subscribersCount: {
+          $size: "$subscribers", // Count how many documents (subscribers) are in the "subscribers" array
+        },
+        channelsSubscribedToCount: {
+          $size: "$subscribedTo", // Count how many channels this user is following
+        },
         isSubscribed: {
           $cond: {
-            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
-            then: true,
-            else: false,
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] }, // Check if logged-in user's ID exists in the subscriber list
+            then: true, // If found, return true (user is subscribed)
+            else: false, // Otherwise, return false (user is NOT subscribed)
           },
         },
       },
     },
     {
       $project: {
-        fullName: 1,
-        username: 1,
-        subscribersCount: 1,
-        channelsSubscribedToCount: 1,
-        isSubscribed: 1,
-        avatar: 1,
-        coverImage: 1,
-        email: 1,
+        fullName: 1, // Include full name of the user
+        username: 1, // Include username
+        subscribersCount: 1, // Include total subscriber count
+        channelsSubscribedToCount: 1, // Include total subscribed-to count
+        isSubscribed: 1, // Include whether logged-in user is subscribed
+        avatar: 1, // Include avatar image
+        coverImage: 1, // Include cover image
+        email: 1, // Include email
       },
     },
   ]);
 
+  // If no channel is found, return an error
   if (!channel?.length) {
-    throw new ApiError(404, "Channel does not exist");
+    throw new ApiError(404, "channel does not exist");
   }
 
+  // Sending a success response with the channel data
   return res
     .status(200)
-    .json(new ApiResponse(200, channel[0], "User channel fetched successfully"));
-});
+    .json(
+      new ApiResponse(200, channel[0], "User channel fetched successfully")
+    );
 
+});
 
 const getWatchHistory = asyncHandler(async (req, res) => {
 
