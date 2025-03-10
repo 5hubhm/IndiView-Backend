@@ -141,9 +141,9 @@ const updateVideo = asyncHandler(async (req, res) => {
   }
 
   // Get files from Multer
-  const thumbnailFile = req.files?.thumbnail?.[0];
+  const thumbnailFile = req.file
 
-  console.log("Request Files:", req.files);
+  console.log("Request Files:", req.file);
   console.log("Request Body:", req.body);
 
   try {
