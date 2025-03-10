@@ -112,7 +112,8 @@ const getVideoById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid video ID");
   }
 
-  const video = await Video.findById(videoId).populate("owner", "name email");
+  // Fetch video and populate owner's username
+  const video = await Video.findById(videoId).populate("owner", "username name email");
 
   // If the video does not exist, return a 404 error.
   if (!video) {
@@ -123,7 +124,6 @@ const getVideoById = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, video, "Video fetched successfully"));
-
 });
 
 const updateVideo = asyncHandler(async (req, res) => {
