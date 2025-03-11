@@ -6,10 +6,13 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://indiview.vercel.app"] , // Restricts requests to allowed domains (from .env)
-    credentials: true, // Allows cookies & authentication headers to be sent
+    origin: ["http://localhost:5173", "https://indiview.vercel.app"],
+    credentials: true, // Allows cookies & authentication headers
+    methods: ["GET", "POST", "PUT", "DELETE"], // Explicitly allow methods
+    allowedHeaders: ["Content-Type", "Authorization"], // Ensure headers are sent
   })
 );
+
 
 app.use(express.json({ limit: "200mb" })); 
 app.use(express.urlencoded({ extended: true, limit: "200mb" }));
