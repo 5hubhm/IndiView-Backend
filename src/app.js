@@ -8,7 +8,7 @@ app.use(
   cors({
     origin: ["http://localhost:5173", "https://indiview.vercel.app"],
     credentials: true, // Allows cookies & authentication headers
-    methods: ["GET", "POST", "PUT", "DELETE"], // Explicitly allow methods
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"], // Explicitly allow methods
     allowedHeaders: ["Content-Type", "Authorization"], // Ensure headers are sent
   })
 );
