@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { v2 as cloudinary } from "cloudinary";
 
+
 const generateAccessAndRefereshTokens = async (userId) => {
   // Function to generate new access & refresh tokens for a user
   try {
@@ -49,6 +50,9 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const avatarLocalPath = req.files?.avatar?.[0]?.path;
   const coverImageLocalPath = req.files?.coverImage?.[0]?.path || null;
+
+  console.log("FILES RECEIVED:", req.files);
+
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar file is required");

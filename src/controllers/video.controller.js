@@ -4,6 +4,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import fs from "fs";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const {
@@ -75,16 +76,29 @@ const publishAVideo = asyncHandler(async (req, res) => {
   if (!videoFile) throw new ApiError(400, "Video file is required");
   if (!thumbnailFile) throw new ApiError(400, "Thumbnail is required");
 
+  console.log("Request Files:", req.files); // Log the request files for debugging
+  // In your video.controller.js
+  console.log("Thumbnail Path:", thumbnailFile.path);
+  console.log("Video File Path:", videoFile.path);
+
+  // Check if files exist
+  if (!fs.existsSync(videoFile.path)) {
+    throw new ApiError(400, `Video file not found at path: ${videoFile.path}`);
+  }
+  if (!fs.existsSync(thumbnailFile.path)) {
+    throw new ApiError(400, `Thumbnail file not found at path: ${thumbnailFile.path}`);
+  }
+
   try {
     // Upload video
-    const uploadedVideo = await uploadOnCloudinary(videoFile, "video");
+    const uploadedVideo = await uploadOnCloudinary(videoFile.path, "video");
     if (!uploadedVideo) throw new ApiError(400, "Cloudinary Error: Video upload failed");
 
-    // **Extract duration from Cloudinary response**
+    // Extract duration from Cloudinary response
     const videoDuration = uploadedVideo.duration || 0;
 
     // Upload thumbnail
-    const uploadedThumbnail = await uploadOnCloudinary(thumbnailFile, "image");
+    const uploadedThumbnail = await uploadOnCloudinary(thumbnailFile.path, "image");
     if (!uploadedThumbnail) throw new ApiError(400, "Cloudinary Error: Thumbnail upload failed");
 
     // Save video details in the database
@@ -93,7 +107,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
       thumbnail: uploadedThumbnail.url,
       title,
       description,
-      duration: videoDuration, // **Save the duration**
+      duration: videoDuration,
       owner: req.user?._id,
     });
 

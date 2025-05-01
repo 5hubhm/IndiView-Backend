@@ -8,49 +8,29 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Helper function to upload buffers to Cloudinary
-const uploadBufferToCloudinary = (buffer, resourceType) => {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      { resource_type: resourceType },
-      (error, result) => {
-        if (error) {
-          console.error("Cloudinary Upload Error:", error);
-          reject(error);
-        } else {
-          resolve(result);
-        }
-      }
-    );
-    uploadStream.end(buffer);
-  });
-};
-
-// Main Upload Function
-const uploadOnCloudinary = async (file, resourceType = "auto") => {
+const uploadOnCloudinary = async (localFilePath) => {
   try {
-    if (!file) return null;
+    if (!localFilePath) return null;
 
-    let response;
+    // Upload the file to Cloudinary
+    const response = await cloudinary.uploader.upload(localFilePath, {
+      resource_type: "auto",  // Automatically detect the resource type (image/video/etc.)
+    });
 
-    if (file.buffer) {
-      // Upload buffer (Vercel)
-      response = await uploadBufferToCloudinary(file.buffer, resourceType);
-    } else {
-      // Upload from local path (Local)
-      response = await cloudinary.uploader.upload(file.path, {
-        resource_type: resourceType,
-        chunk_size: 6000000, // 6MB chunks to allow large file uploads
-      });
-      fs.unlinkSync(file.path); // Remove local temp file after upload
-    }
+    // File uploaded successfully, now delete the local temporary file
+    fs.unlinkSync(localFilePath);
+    return response; // Return the response containing the URL or other data
 
-    return response;
   } catch (error) {
-    console.error("Cloudinary Error:", error);
-    return null;
+    // Remove the temporary file even if the upload failed
+    fs.unlinkSync(localFilePath);
+
+    // Log the error for debugging
+    console.error("Cloudinary Upload Failed:", error);
+
+    // You can optionally return a custom error message to the caller
+    throw new Error("File upload to Cloudinary failed.");
   }
 };
-
 
 export { uploadOnCloudinary };

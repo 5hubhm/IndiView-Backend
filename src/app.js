@@ -46,7 +46,7 @@ app.use("/api/v1/dashboard", dashboardRouter);
 // http://localhost:8000/api/v1/users/register
 
 app.get("/", (req, res) => {
-  res.send("Backend is running!");
+  res.send(`Backend is running`);
 });
 
 export { app };
